@@ -1,1 +1,1 @@
-# Meteor-Map
+# FreeCodeCamp's project Meteor-Map
