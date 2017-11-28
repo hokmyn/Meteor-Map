@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-name" content="Meteor Map" />
+    <meta name="author" content="Denis Kalinin" />
+    <title>Meteor Map</title>
+    <!-- stylesheets -->
+    <link rel="stylesheet" href="css/main.css">
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <!-- Javascript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.9.1/d3.min.js"></script>
+    <script>
+      const urlMet = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json',
+    urlMap = 'https://enjalot.github.io/wwsd/data/world/world-110m.geojson';
+const draw = () => 
+  myData => {
+    let geoJson,
+        projection,
+        svg = d3.select('#map').append('svg')
+                .attr('width','100%')
+                .attr('height', '800px'),
+        geoGenerator = d3.geoPath()
+          .projection(projection)
+          .pointRadius((d) => Math.cbrt(d.properties.mass * 3 / (4 * Math.PI)) / 10 / (d3.event ? d3.event.transform.k : 1)),
+        graticule = d3.geoGraticule(),
+        tooltip = d3.select('#map')
+                    .append('div')
+                      .classed('tooltip', true)
+                      .style('opacity', 0);
+    
+    function showMap() {
+      projection = d3.geoMercator()
+                      .scale(200)
+                      .translate([700, 450])
+                      .center([0, 0]);
+      geoGenerator.projection(projection);
+
+      
+      let countries = svg.append('g')
+        .selectAll('.country')
+        .data(geoJson.features)
+        .enter()
+        .append('path')
+        .attr('class', 'country')
+        .attr('d', geoGenerator)
+        .on('mouseover', function(d) {
+          d3.select(this).transition()
+          .duration(200)
+          .attr('stroke-width', '0.4')
+          .style('opacity', 0.6);
+          tooltip.transition().duration(200).style('opacity', 0.6);
+          tooltip.html(d.properties.name)
+                  .style('left', (d3.event.pageX + 30) + 'px')
+                  .style('top', (d3.event.pageY) + 'px');
+        })
+        .on('mouseout', function(d) {
+          d3.select(this).transition()
+          .duration(200)
+          .attr('stroke-width', '0.2')
+          .style('opacity', 1);
+          tooltip.transition().duration(200).style('opacity', 0);
+        });
+      let meteorites = svg.append('g')
+        .selectAll('.meteorites')
+        .data(myData.features)
+        .enter()
+          .append('path')
+          .attr('class', 'meteorites')
+			    .attr('d', geoGenerator)
+			    .attr('fill', 'red')
+			    .style('opacity', '0.7')
+          .on('mouseover', function(d) {
+             d3.select(this).transition()
+                .duration(200)
+                .style('stroke-width', '0.2')
+					      .style('opacity', '1');
+             tooltip.transition()
+                    .duration(300)
+                    .style('opacity', 0.8);
+             let tooltipHtml = `Name: ${d.properties.name}<br>Class:  ${d.properties.recclass}<br>Mass: ${(+d.properties.mass).toFixed(2)} <br>Lat: ${(+d.properties.reclat).toFixed(5)}<br>Long: ${(+d.properties.reclong).toFixed(5)} <br>Year: ${d.properties.year.slice(0, 4)}`;
+             tooltip.html(tooltipHtml)
+                    .style('left', (d3.event.pageX + 30) + 'px')
+                    .style('top', (d3.event.pageY) + 'px');
+            })
+            .on('mouseout', function(d) {
+              d3.select(this).transition()
+                .duration(200)
+                .style('stroke-width', '0.1')
+					      .style('opacity', 0.7);
+              tooltip.transition()
+                .duration(300)
+                .style('opacity', 0);
+            });
+      let zoom = d3.zoom()
+			             .scaleExtent([0.8, 10])
+    	             .on('zoom', zoomed);
+		  svg.call(zoom);
+		  function zoomed() {
+			  d3.selectAll('g').attr('transform', d3.event.transform);
+		  }
+    }
+    d3.json(urlMap, (err, json) => {
+      geoJson = json;
+      showMap();
+    });    
+  }
+d3.json(urlMet, draw());    
+    </script>
+ </body>
+</html>
